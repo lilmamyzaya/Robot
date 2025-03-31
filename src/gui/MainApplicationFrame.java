@@ -126,6 +126,11 @@ public class MainApplicationFrame extends JFrame {
     }
 
     private void exitApplication() {
+        UIManager.put("OptionPane.yesButtonText", "Да");
+        UIManager.put("OptionPane.noButtonText", "Нет");
+        UIManager.put("OptionPane.cancelButtonText", "Отмена");
+        UIManager.put("OptionPane.okButtonText", "ОК");
+
         int result = JOptionPane.showConfirmDialog(
                 this, "Вы действительно хотите выйти?", "Подтверждение",
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE
