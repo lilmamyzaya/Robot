@@ -1,8 +1,14 @@
 package gui;
 
-import java.awt.Dimension;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Properties;
 import javax.swing.*;
 
 import log.Logger;
@@ -12,6 +18,8 @@ import log.Logger;
  */
 public class MainApplicationFrame extends JFrame {
     private final JDesktopPane desktopPane = new JDesktopPane();
+
+    private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
 
     public MainApplicationFrame() {
         // Установка размеров главного окна
@@ -30,6 +38,23 @@ public class MainApplicationFrame extends JFrame {
 
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        setContentPane(desktopPane);
+        setJMenuBar(generateMenuBar());
+
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+
+        loadWindowState(this); // Загружаем положение окна
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                saveWindowState(MainApplicationFrame.this); // Сохраняем перед выходом
+                exitApplication();
+            }
+        });
+
+        setVisible(true);
     }
 
     protected LogWindow createLogWindow() {
@@ -46,6 +71,58 @@ public class MainApplicationFrame extends JFrame {
         desktopPane.add(frame);
         frame.setVisible(true);
     }
+
+    private void saveWindowState(JFrame frame) {
+        Properties props = new Properties();
+
+        int state = frame.getExtendedState();
+        props.setProperty("state", String.valueOf(state));
+
+        if (state == Frame.NORMAL) { // Сохраняем размеры только если окно не развернуто
+            props.setProperty("x", String.valueOf(frame.getX()));
+            props.setProperty("y", String.valueOf(frame.getY()));
+            props.setProperty("width", String.valueOf(frame.getWidth()));
+            props.setProperty("height", String.valueOf(frame.getHeight()));
+        }
+
+        try (FileOutputStream fos = new FileOutputStream(CONFIG_PATH)) {
+            props.store(fos, "Window State Configuration");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void loadWindowState(JFrame frame) {
+        Properties props = new Properties();
+        File configFile = new File(CONFIG_PATH);
+
+        if (!configFile.exists()) {
+            return;
+        }
+
+        try (FileInputStream fis = new FileInputStream(CONFIG_PATH)) {
+            props.load(fis);
+
+            int state = Integer.parseInt(props.getProperty("state", String.valueOf(JFrame.NORMAL)));
+
+            if (state == Frame.NORMAL) { // Если не развернуто - применяем размеры
+                int x = Integer.parseInt(props.getProperty("x", "100"));
+                int y = Integer.parseInt(props.getProperty("y", "100"));
+                int width = Integer.parseInt(props.getProperty("width", "800"));
+                int height = Integer.parseInt(props.getProperty("height", "600"));
+
+                frame.setBounds(x, y, width, height);
+            }
+
+            // Важно: Устанавливаем состояние ПОСЛЕ размеров
+            frame.setExtendedState(state);
+
+        } catch (IOException | NumberFormatException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Генерация панели меню.
@@ -137,6 +214,7 @@ public class MainApplicationFrame extends JFrame {
         );
 
         if (result == JOptionPane.YES_OPTION) {
+            saveWindowState(this);
             System.exit(0);
         }
     }
