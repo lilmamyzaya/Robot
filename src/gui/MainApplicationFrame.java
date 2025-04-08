@@ -212,10 +212,34 @@ public class MainApplicationFrame extends JFrame {
                 this, "Вы действительно хотите выйти?", "Подтверждение",
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE
         );
-
+        /**
         if (result == JOptionPane.YES_OPTION) {
             saveWindowState(this);
             System.exit(0);
+        }*/
+        if (result == JOptionPane.YES_OPTION) {
+            saveWindowState(this);
+
+            for (JInternalFrame frame : desktopPane.getAllFrames()) {
+                if (frame instanceof GameWindow gw) {
+                    gw.shutdown();
+                }
+            }
+
+            this.dispose();
+
+            EventQueue.invokeLater(() -> {
+                boolean hasVisibleWindows = false;
+                for (Window window : Window.getWindows()) {
+                    if (window.isDisplayable()) {
+                        hasVisibleWindows = true;
+                        break;
+                    }
+                }
+                if (!hasVisibleWindows) {
+                    System.out.println("Приложение завершено");
+                }
+            });
         }
     }
 
