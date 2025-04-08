@@ -17,4 +17,8 @@ public class GameWindow extends JInternalFrame
         getContentPane().add(panel);
         pack();
     }
+    public void shutdown() {
+        m_visualizer.shutdown();
+    }
+
 }

@@ -22,10 +22,6 @@ public class MainApplicationFrame extends JFrame {
     private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
 
     public MainApplicationFrame() {
-        // Установка размеров главного окна
-        int inset = 50;
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds(inset, inset, screenSize.width - inset * 2, screenSize.height - inset * 2);
 
         setContentPane(desktopPane);
 
@@ -71,18 +67,43 @@ public class MainApplicationFrame extends JFrame {
         desktopPane.add(frame);
         frame.setVisible(true);
     }
+    private void saveInternalFrameState(JInternalFrame frame, String name, Properties props) {
+        props.setProperty(name + ".x", String.valueOf(frame.getX()));
+        props.setProperty(name + ".y", String.valueOf(frame.getY()));
+        props.setProperty(name + ".width", String.valueOf(frame.getWidth()));
+        props.setProperty(name + ".height", String.valueOf(frame.getHeight()));
+        props.setProperty(name + ".icon", String.valueOf(frame.isIcon()));
+    }
+
+    private void loadInternalFrameState(JInternalFrame frame, String name, Properties props) {
+        try {
+            int x = Integer.parseInt(props.getProperty(name + ".x", "50"));
+            int y = Integer.parseInt(props.getProperty(name + ".y", "50"));
+            int width = Integer.parseInt(props.getProperty(name + ".width", "300"));
+            int height = Integer.parseInt(props.getProperty(name + ".height", "300"));
+            boolean icon = Boolean.parseBoolean(props.getProperty(name + ".icon", "false"));
+
+            frame.setBounds(x, y, width, height);
+            frame.setIcon(icon); // Свернуть/развернуть
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     private void saveWindowState(JFrame frame) {
         Properties props = new Properties();
-
         int state = frame.getExtendedState();
         props.setProperty("state", String.valueOf(state));
 
         if (state == Frame.NORMAL) { // Сохраняем размеры только если окно не развернуто
-            props.setProperty("x", String.valueOf(frame.getX()));
-            props.setProperty("y", String.valueOf(frame.getY()));
-            props.setProperty("width", String.valueOf(frame.getWidth()));
-            props.setProperty("height", String.valueOf(frame.getHeight()));
+            props.setProperty("main.x", String.valueOf(frame.getX()));
+            props.setProperty("main.y", String.valueOf(frame.getY()));
+            props.setProperty("main.width", String.valueOf(frame.getWidth()));
+            props.setProperty("main.height", String.valueOf(frame.getHeight()));
+        }
+        // Сохраняем окна
+        for (JInternalFrame internalFrame : desktopPane.getAllFrames()) {
+            saveInternalFrameState(internalFrame, internalFrame.getTitle(), props);
         }
 
         try (FileOutputStream fos = new FileOutputStream(CONFIG_PATH)) {
@@ -98,29 +119,39 @@ public class MainApplicationFrame extends JFrame {
         File configFile = new File(CONFIG_PATH);
 
         if (!configFile.exists()) {
+            setDefaultBounds(frame);
             return;
         }
-
         try (FileInputStream fis = new FileInputStream(CONFIG_PATH)) {
             props.load(fis);
 
-            int state = Integer.parseInt(props.getProperty("state", String.valueOf(JFrame.NORMAL)));
+            int state = Integer.parseInt(props.getProperty("main.state", String.valueOf(JFrame.NORMAL)));
 
             if (state == Frame.NORMAL) { // Если не развернуто - применяем размеры
-                int x = Integer.parseInt(props.getProperty("x", "100"));
-                int y = Integer.parseInt(props.getProperty("y", "100"));
-                int width = Integer.parseInt(props.getProperty("width", "800"));
-                int height = Integer.parseInt(props.getProperty("height", "600"));
-
+                int x = Integer.parseInt(props.getProperty("main.x", "100"));
+                int y = Integer.parseInt(props.getProperty("main.y", "100"));
+                int width = Integer.parseInt(props.getProperty("main.width", "800"));
+                int height = Integer.parseInt(props.getProperty("main.height", "600"));
                 frame.setBounds(x, y, width, height);
             }
 
             // Важно: Устанавливаем состояние ПОСЛЕ размеров
             frame.setExtendedState(state);
 
-        } catch (IOException | NumberFormatException e) {
-            e.printStackTrace();
+            // Загружаем окна (все добавлены ДО этого)
+            for (JInternalFrame internalFrame : desktopPane.getAllFrames()) {
+                loadInternalFrameState(internalFrame, internalFrame.getTitle(), props);
+            }
         }
+        catch (IOException | NumberFormatException e) {
+            e.printStackTrace();
+            setDefaultBounds(frame);
+        }
+    }
+    private void setDefaultBounds(JFrame frame) {
+        int inset = 50;
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        frame.setBounds(inset, inset, screenSize.width - inset * 2, screenSize.height - inset * 2);
     }
 
 
@@ -212,10 +243,34 @@ public class MainApplicationFrame extends JFrame {
                 this, "Вы действительно хотите выйти?", "Подтверждение",
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE
         );
-
+        /**
         if (result == JOptionPane.YES_OPTION) {
             saveWindowState(this);
             System.exit(0);
+        }*/
+        if (result == JOptionPane.YES_OPTION) {
+            saveWindowState(this);
+
+            for (JInternalFrame frame : desktopPane.getAllFrames()) {
+                if (frame instanceof GameWindow gw) {
+                    gw.shutdown();
+                }
+            }
+
+            this.dispose();
+
+            EventQueue.invokeLater(() -> {
+                boolean hasVisibleWindows = false;
+                for (Window window : Window.getWindows()) {
+                    if (window.isDisplayable()) {
+                        hasVisibleWindows = true;
+                        break;
+                    }
+                }
+                if (!hasVisibleWindows) {
+                    System.out.println("Приложение завершено");
+                }
+            });
         }
     }
 
