@@ -28,9 +28,15 @@ public class MainApplicationFrame extends JFrame {
         LogWindow logWindow = createLogWindow();
         addWindow(logWindow);
 
-        GameWindow gameWindow = new GameWindow();
-        gameWindow.setSize(400, 400);
-        addWindow(gameWindow);
+        GameVisualizer visualizer = new GameVisualizer(); // создаем визуализатор
+
+        GameWindow gameWindow = new GameWindow(visualizer); // передаем визуализатор в окно
+        gameWindow.setSize(400, 400); // опционально
+        addWindow(gameWindow); // добавляем в главное окно
+
+        RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(visualizer.getModel());
+        addWindow(coordsWindow);// добавляем окно координат
+
 
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(EXIT_ON_CLOSE);

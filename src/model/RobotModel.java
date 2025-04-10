@@ -12,18 +12,28 @@ public class RobotModel extends Observable {
 
     public void updatePosition(double duration) {
         // здесь логика расчета движения, исправленная
-        double distance = distanceToTarget();
+
+        double dx = targetX - x;
+        double dy = targetY - y;
+        double distance = Math.hypot(dx, dy);
+        //double distance = distanceToTarget();
         if (distance < 0.5) return;
 
-        double angleToTarget = Math.atan2(targetY - y, targetX - x);
+        double angleToTarget = Math.atan2(dy, dx);
         double angleDiff = normalizeAngle(angleToTarget - direction);
 
-        double angularVelocity = Math.signum(angleDiff) * Math.min(Math.abs(angleDiff), 0.001);
-        double velocity = 0.1;
+        // Увеличим допустимую скорость поворота
+        double maxAngularVelocity = 0.05;
+        double angularVelocity = Math.signum(angleDiff) * Math.min(Math.abs(angleDiff), maxAngularVelocity);
+
+        // Ехать только если повёрнут не слишком криво
+        double forwardSpeed = Math.abs(angleDiff) < Math.PI / 2 ? 1.0 : 0.0;
+       // double angularVelocity = Math.signum(angleDiff) * Math.min(Math.abs(angleDiff), 0.1);
+        //double velocity = 1;
 
         direction = normalizeAngle(direction + angularVelocity * duration);
-        x += velocity * duration * Math.cos(direction);
-        y += velocity * duration * Math.sin(direction);
+        x += forwardSpeed * Math.cos(direction) * duration * 100;
+        y += forwardSpeed * Math.sin(direction) * duration * 100;
 
         setChanged();
         notifyObservers();
@@ -39,6 +49,13 @@ public class RobotModel extends Observable {
         return angle;
     }
 
+    public int getTargetX() {
+        return (int) targetX;
+    }
+
+    public int getTargetY() {
+        return (int) targetY;
+    }
     public double getX() { return x; }
     public double getY() { return y; }
     public double getDirection() { return direction; }

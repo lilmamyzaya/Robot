@@ -6,11 +6,11 @@ import javax.swing.*;
 import java.util.Observable;
 import java.util.Observer;
 
-public class RobotCoordinatesWindow extends JDialog implements Observer {
+public class RobotCoordinatesWindow extends JInternalFrame implements Observer {
     private final JLabel coordsLabel;
 
-    public RobotCoordinatesWindow(JFrame owner, RobotModel model) {
-        super(owner, "Координаты робота", false);
+    public RobotCoordinatesWindow(RobotModel model) {
+        super("Координаты робота", true, true, true, true);
         coordsLabel = new JLabel();
         add(coordsLabel);
         model.addObserver(this);
@@ -26,3 +26,4 @@ public class RobotCoordinatesWindow extends JDialog implements Observer {
         }
     }
 }
+
