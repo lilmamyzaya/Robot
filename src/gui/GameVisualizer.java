@@ -6,7 +6,6 @@ import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
@@ -18,7 +17,6 @@ import javax.swing.JPanel;
 public class GameVisualizer extends JPanel
 {
     private final RobotModel model;
-
     private final Timer timer = new Timer("robot_timer", true);
     //private final Timer m_timer = initTimer();
     
@@ -39,9 +37,10 @@ public class GameVisualizer extends JPanel
     private static final double maxAngularVelocity = 0.001; 
     */
 
-    public GameVisualizer() {
-        this.model = new RobotModel();
+    public GameVisualizer(RobotModel model) {
+        //this.model = new RobotModel();
         setDoubleBuffered(true);
+        this.model = model;
 
         timer.schedule(new TimerTask() {
             @Override
@@ -57,8 +56,17 @@ public class GameVisualizer extends JPanel
                 model.setTarget(e.getX(), e.getY());
             }
         });
+
     }
 
+    public RobotModel getModel() {
+        return model;
+    }
+
+    public void shutdown() {
+        model.shutdown();
+        timer.cancel();
+    }
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -190,10 +198,6 @@ public class GameVisualizer extends JPanel
         g.drawOval(centerX - diam1 / 2, centerY - diam2 / 2, diam1, diam2);
     }
 
-    public RobotModel getModel() {
-        return model;
-    }
-
     private void drawRobot(Graphics2D g, double x, double y, double direction) {
         int robotCenterX = (int) Math.round(x);
         int robotCenterY = (int) Math.round(y);
@@ -217,9 +221,5 @@ public class GameVisualizer extends JPanel
         fillOval(g, x, y, 5, 5);
         g.setColor(Color.BLACK);
         drawOval(g, x, y, 5, 5);
-    }
-
-    public void shutdown() {
-        timer.cancel();
     }
 }

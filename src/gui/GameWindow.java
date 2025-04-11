@@ -1,9 +1,10 @@
 package gui;
 
 import java.awt.BorderLayout;
-
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
+import javax.swing.event.InternalFrameAdapter;
+
 
 public class GameWindow extends JInternalFrame
 {
@@ -17,7 +18,15 @@ public class GameWindow extends JInternalFrame
         panel.add(m_visualizer, BorderLayout.CENTER);
         getContentPane().add(panel);
         pack();
+
+        addInternalFrameListener(new InternalFrameAdapter() {
+            @Override
+            public void internalFrameClosing(javax.swing.event.InternalFrameEvent e) {
+                shutdown(); // вызываем shutdown при закрытии окна
+            }
+        });
     }
+
     public void shutdown() {
         m_visualizer.shutdown();
     }

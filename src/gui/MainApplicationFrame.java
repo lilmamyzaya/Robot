@@ -9,7 +9,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 import javax.swing.*;
+
+import model.RobotModel;
+
 
 import log.Logger;
 
@@ -18,41 +22,40 @@ import log.Logger;
  */
 public class MainApplicationFrame extends JFrame {
     private final JDesktopPane desktopPane = new JDesktopPane();
-
+    private final RobotModel robotModel = new RobotModel();
     private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
 
+
     public MainApplicationFrame() {
+        setJMenuBar(generateMenuBar());
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         setContentPane(desktopPane);
 
         LogWindow logWindow = createLogWindow();
         addWindow(logWindow);
 
-        GameVisualizer visualizer = new GameVisualizer(); // создаем визуализатор
+        GameVisualizer visualizer = new GameVisualizer(robotModel); // robotModel уже инициализирован
 
-        GameWindow gameWindow = new GameWindow(visualizer); // передаем визуализатор в окно
-        gameWindow.setSize(400, 400); // опционально
-        addWindow(gameWindow); // добавляем в главное окно
+        GameWindow gameWindow = new GameWindow(visualizer);
+        gameWindow.setSize(400, 400);
+        addWindow(gameWindow);
 
         RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(visualizer.getModel());
-        addWindow(coordsWindow);// добавляем окно координат
-
+        addWindow(coordsWindow);
 
         setJMenuBar(generateMenuBar());
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE); // Устанавливаем один раз
 
-        setContentPane(desktopPane);
-        setJMenuBar(generateMenuBar());
-
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-
-        loadWindowState(this); // Загружаем положение окна
+        loadWindowState(this);
 
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 saveWindowState(MainApplicationFrame.this); // Сохраняем перед выходом
                 exitApplication();
+                //ExecutorService RobotModel;
+                robotModel.shutdown();
             }
         });
 
@@ -276,6 +279,14 @@ public class MainApplicationFrame extends JFrame {
                 if (!hasVisibleWindows) {
                     System.out.println("Приложение завершено");
                 }
+            });
+            EventQueue.invokeLater(() -> {
+                for (Window window : Window.getWindows()) {
+                    if (window.isDisplayable()) {
+                        return; // Есть ещё окна — не выходим
+                    }
+                }
+                //System.exit(0); // Все окна закрыты → завершаем приложение
             });
         }
     }
