@@ -1,50 +1,71 @@
 package gui;
 
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
-import java.awt.TextArea;
+import log.*;
 
-import javax.swing.JInternalFrame;
-import javax.swing.JPanel;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-import log.LogChangeListener;
-import log.LogEntry;
-import log.LogWindowSource;
+public class LogWindow extends JInternalFrame implements LogChangeListener {
+    private final LogWindowSource logSource;
+    private final JTextArea logContent;
+    private final Timer updateTimer;
 
-public class LogWindow extends JInternalFrame implements LogChangeListener
-{
-    private LogWindowSource m_logSource;
-    private TextArea m_logContent;
-
-    public LogWindow(LogWindowSource logSource) 
-    {
+    public LogWindow(LogWindowSource logSource) {
         super("Протокол работы", true, true, true, true);
-        m_logSource = logSource;
-        m_logSource.registerListener(this);
-        m_logContent = new TextArea("");
-        m_logContent.setSize(200, 500);
-        
+        this.logSource = logSource;
+        this.logSource.registerListener(this);
+
+        logContent = new JTextArea();
+        logContent.setEditable(false);
+        logContent.setFont(new Font("Monospaced", Font.PLAIN, 12));
+
+        JScrollPane scrollPane = new JScrollPane(logContent);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
         JPanel panel = new JPanel(new BorderLayout());
-        panel.add(m_logContent, BorderLayout.CENTER);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Кнопка очистки лога
+        JButton clearButton = new JButton("Очистить");
+        clearButton.addActionListener(e -> {
+            synchronized (logSource) {
+                logContent.setText("");
+            }
+        });
+        panel.add(clearButton, BorderLayout.SOUTH);
+
         getContentPane().add(panel);
         pack();
+
+        // Таймер для отложенного обновления (чтобы избежать частых перерисовок)
+        updateTimer = new Timer(100, e -> updateLogContent());
+        updateTimer.setRepeats(false);
         updateLogContent();
     }
 
-    private void updateLogContent()
-    {
+    private void updateLogContent() {
         StringBuilder content = new StringBuilder();
-        for (LogEntry entry : m_logSource.all())
-        {
-            content.append(entry.getMessage()).append("\n");
+        for (LogEntry entry : logSource.all()) {
+            content.append(String.format("[%s] %s%n",
+                    entry.getLevel().name(), entry.getMessage()));
         }
-        m_logContent.setText(content.toString());
-        m_logContent.invalidate();
+        logContent.setText(content.toString());
+        logContent.setCaretPosition(logContent.getDocument().getLength());
     }
-    
+
     @Override
-    public void onLogChanged()
-    {
-        EventQueue.invokeLater(this::updateLogContent);
+    public void onLogChanged() {
+        if (!updateTimer.isRunning()) {
+            updateTimer.start();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        logSource.unregisterListener(this);
+        updateTimer.stop();
+        super.dispose();
     }
 }

@@ -1,58 +1,68 @@
 package log;
 
+// Управляет хранением сообщений и уведомляет подписчиков
+
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Источник логов с ограниченным размером очереди и корректным управлением слушателями.
- */
 public class LogWindowSource {
-    private final int m_iQueueLength;
-    private final LinkedList<LogEntry> m_messages;
-    private final List<LogChangeListener> m_listeners;
+    private final int queueCapacity;
+    private final List<LogEntry> messages;
+    private final List<LogChangeListener> listeners;
 
-    public LogWindowSource(int iQueueLength) {
-        this.m_iQueueLength = iQueueLength;
-        this.m_messages = new LinkedList<>();
-        this.m_listeners = new LinkedList<>();
+    public LogWindowSource(int queueCapacity) {
+        this.queueCapacity = queueCapacity;
+        this.messages = Collections.synchronizedList(new LinkedList<>());
+        this.listeners = new CopyOnWriteArrayList<>();
     }
 
-    public synchronized void registerListener(LogChangeListener listener) {
-        if (!m_listeners.contains(listener)) {
-            m_listeners.add(listener);
+    public void registerListener(LogChangeListener listener) {
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
         }
     }
 
-    public synchronized void unregisterListener(LogChangeListener listener) {
-        m_listeners.remove(listener);
+    public void unregisterListener(LogChangeListener listener) {
+        listeners.remove(listener);
     }
 
-    public synchronized void append(LogLevel logLevel, String strMessage) {
-        if (m_messages.size() >= m_iQueueLength) {
-            m_messages.removeFirst(); // Удаляем старейшее сообщение, если достигнут лимит
+    public void append(LogLevel logLevel, String strMessage) {
+        synchronized (messages) {
+            if (messages.size() >= queueCapacity) {
+                messages.remove(0);
+            }
+            messages.add(new LogEntry(logLevel, strMessage));
         }
-        m_messages.addLast(new LogEntry(logLevel, strMessage));
+        notifyListeners();
+    }
 
-        // Уведомление слушателей
-        for (LogChangeListener listener : new LinkedList<>(m_listeners)) {
+    private void notifyListeners() {
+        for (LogChangeListener listener : listeners) {
             listener.onLogChanged();
         }
     }
 
-    public synchronized int size() {
-        return m_messages.size();
-    }
-
-    public synchronized Iterable<LogEntry> range(int startFrom, int count) {
-        if (startFrom < 0 || startFrom >= m_messages.size()) {
-            return Collections.emptyList();
+    public int size() {
+        synchronized (messages) {
+            return messages.size();
         }
-        int endIndex = Math.min(startFrom + count, m_messages.size());
-        return new LinkedList<>(m_messages.subList(startFrom, endIndex));
     }
 
-    public synchronized Iterable<LogEntry> all() {
-        return new LinkedList<>(m_messages);
+    public Iterable<LogEntry> range(int startFrom, int count) {
+        synchronized (messages) {
+            if (startFrom < 0 || startFrom >= messages.size()) {
+                return Collections.emptyList();
+            }
+            int endIndex = Math.min(startFrom + count, messages.size());
+            return new LinkedList<>(messages.subList(startFrom, endIndex));
+        }
+    }
+
+    public Iterable<LogEntry> all() {
+        synchronized (messages) {
+            return new LinkedList<>(messages);
+        }
     }
 }

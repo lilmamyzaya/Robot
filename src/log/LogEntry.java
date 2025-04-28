@@ -1,5 +1,7 @@
 package log;
 
+// Хранит одно сообщение лога вместе с его уровнем
+
 public class LogEntry
 {
     private LogLevel m_logLevel;

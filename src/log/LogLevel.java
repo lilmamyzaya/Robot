@@ -1,5 +1,7 @@
 package log;
 
+// Определяются уровни важности сообщений
+
 public enum LogLevel
 {
     Trace(0),
