@@ -23,10 +23,10 @@ public class RobotModel extends Observable {
             }
         }, 0, 10);
     }
-    private static final double MAX_VELOCITY = 10;            // было 0.1
-    private static final double MAX_ANGULAR_VELOCITY = 0.05;   // было 0.001
+    private static final double MAX_VELOCITY = 10;
+    private static final double MAX_ANGULAR_VELOCITY = 0.05;
 
-    public void updatePosition(double duration) {
+    /*public void updatePosition(double duration) {
         // здесь логика расчета движения, исправленная
 
         double dx = targetX - x;
@@ -39,11 +39,6 @@ public class RobotModel extends Observable {
             return;
         }
         /// Параметры движения
-        //double velocity = 100.0; // такая же как maxVelocity
-        /*
-        double velocity = applyLimits(100.0, 0, 100.0);
-        double maxAngularVelocity = 0.5;*/
-        //double angularVelocity = Math.signum(angleDiff) * MAX_ANGULAR_VELOCITY;
         double velocity = MAX_VELOCITY;
         double angularVelocity = Math.signum(angleDiff) * MAX_ANGULAR_VELOCITY;
 
@@ -52,29 +47,48 @@ public class RobotModel extends Observable {
 
         setChanged();
         notifyObservers();
+    }*/
+    public void updatePosition(double duration) {
+        double dx = targetX - x;
+        double dy = targetY - y;
+        double distance = Math.hypot(dx, dy);
+
+        if (distance < 1.0) {
+            x = targetX;
+            y = targetY;
+            return;
+        }
+
+        double angleToTarget = Math.atan2(dy, dx);
+        double angleDiff = normalizeAngle(angleToTarget - direction);
+
+        // Коэффициенты настройки
+        double rotationCoefficient = 4.0;  // чем больше - тем быстрее разворачивается
+        double velocityDropAtLargeAngle = Math.abs(angleDiff) / Math.PI; // 1 при 180 градусах
+
+        // Уменьшаем скорость, если сильно отклонён
+        double velocity = MAX_VELOCITY * (1.0 - velocityDropAtLargeAngle);
+        velocity = Math.max(velocity, 1.0); // минимальная скорость чтобы не встать
+
+        double angularVelocity = angleDiff * rotationCoefficient;
+        angularVelocity = applyLimits(angularVelocity, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
+
+        moveRobot(velocity, angularVelocity, duration);
+
+        setChanged();
+        notifyObservers();
     }
 
     private void moveRobot(double velocity, double angularVelocity, double duration) {
-        velocity = applyLimits(velocity, 0, MAX_VELOCITY);
-        angularVelocity = applyLimits(angularVelocity, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
+        // Обновляем угол робота
+        direction += angularVelocity * duration;  // новое направление
+        direction = normalizeAngle(direction);  // нормализуем угол
 
-
-        double newX = x + velocity / angularVelocity *
-                (Math.sin(direction + angularVelocity * duration) - Math.sin(direction));
-        if (!Double.isFinite(newX)) {
-            newX = x + velocity * duration * Math.cos(direction);
-        }
-
-        double newY = y - velocity / angularVelocity *
-                (Math.cos(direction + angularVelocity * duration) - Math.cos(direction));
-        if (!Double.isFinite(newY)) {
-            newY = y + velocity * duration * Math.sin(direction);
-        }
-
-        x = newX;
-        y = newY;
-        direction = normalizeAngle(direction + angularVelocity * duration);
+        // Обновляем позицию робота
+        x += velocity * Math.cos(direction) * duration;  // новое положение по X
+        y += velocity * Math.sin(direction) * duration;  // новое положение по Y
     }
+
 
     private double applyLimits(double value, double min, double max) {
         if (value < min) return min;

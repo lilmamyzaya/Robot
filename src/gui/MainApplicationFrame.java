@@ -24,35 +24,42 @@ public class MainApplicationFrame extends JFrame {
     private final JDesktopPane desktopPane = new JDesktopPane();
     private final RobotModel robotModel = new RobotModel();
     private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
+    private WindowManager WindowManager;
 
 
     public MainApplicationFrame() {
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+        WindowManager = new WindowManager(desktopPane);
+
 
         setContentPane(desktopPane);
 
         LogWindow logWindow = createLogWindow();
-        addWindow(logWindow);
+        WindowManager.addWindow(logWindow);
+        //addWindow(logWindow);
 
         GameVisualizer visualizer = new GameVisualizer(robotModel); // robotModel уже инициализирован
 
         GameWindow gameWindow = new GameWindow(visualizer);
         gameWindow.setSize(400, 400);
-        addWindow(gameWindow);
+        WindowManager.addWindow(gameWindow);
+       // addWindow(gameWindow);
 
         RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(visualizer.getModel());
-        addWindow(coordsWindow);
+        WindowManager.addWindow(coordsWindow);
+        //addWindow(coordsWindow);
 
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE); // Устанавливаем один раз
 
-        loadWindowState(this);
+        WindowManager.loadWindowState(this);
+        //loadWindowState(this);
 
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                saveWindowState(MainApplicationFrame.this); // Сохраняем перед выходом
+                WindowManager.saveWindowState(MainApplicationFrame.this); // Сохраняем перед выходом
                 exitApplication();
                 //ExecutorService RobotModel;
                 robotModel.shutdown();
@@ -71,7 +78,7 @@ public class MainApplicationFrame extends JFrame {
         Logger.debug("Протокол работает");
         return logWindow;
     }
-
+    /*
     protected void addWindow(JInternalFrame frame) {
         desktopPane.add(frame);
         frame.setVisible(true);
@@ -162,7 +169,7 @@ public class MainApplicationFrame extends JFrame {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         frame.setBounds(inset, inset, screenSize.width - inset * 2, screenSize.height - inset * 2);
     }
-
+*/
 
     /**
      * Генерация панели меню.
@@ -258,7 +265,7 @@ public class MainApplicationFrame extends JFrame {
             System.exit(0);
         }*/
         if (result == JOptionPane.YES_OPTION) {
-            saveWindowState(this);
+            WindowManager.saveWindowState(this);
 
             for (JInternalFrame frame : desktopPane.getAllFrames()) {
                 if (frame instanceof GameWindow gw) {
