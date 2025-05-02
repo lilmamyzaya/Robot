@@ -6,13 +6,11 @@ import javax.swing.JPanel;
 import javax.swing.event.InternalFrameAdapter;
 
 
-public class GameWindow extends JInternalFrame
-{
+public class GameWindow extends JInternalFrame {
     private final GameVisualizer m_visualizer;
-    public GameWindow(GameVisualizer visualizer)
-    {
+
+    public GameWindow(GameVisualizer visualizer) {
         super("Игровое поле", true, true, true, true);
-        //m_visualizer = new GameVisualizer();
         this.m_visualizer = visualizer;
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(m_visualizer, BorderLayout.CENTER);
@@ -22,7 +20,7 @@ public class GameWindow extends JInternalFrame
         addInternalFrameListener(new InternalFrameAdapter() {
             @Override
             public void internalFrameClosing(javax.swing.event.InternalFrameEvent e) {
-                shutdown(); // вызываем shutdown при закрытии окна
+                shutdown();
             }
         });
     }
@@ -30,5 +28,4 @@ public class GameWindow extends JInternalFrame
     public void shutdown() {
         m_visualizer.shutdown();
     }
-
 }

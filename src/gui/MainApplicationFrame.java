@@ -14,29 +14,26 @@ public class MainApplicationFrame extends JFrame {
     private final JDesktopPane desktopPane = new JDesktopPane();
     private final RobotModel robotModel = new RobotModel();
     private final WindowManager windowManager;
+    private final MainWindowManager mainWindowManager;
 
     public MainApplicationFrame() {
         windowManager = new WindowManager(desktopPane, robotModel);
+        mainWindowManager = new MainWindowManager(this);
+
         setContentPane(desktopPane);
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
-        // Настройка главного окна
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setMinimumSize(new Dimension(950, 850));
-
         // Инициализация окон
         windowManager.initializeWindows();
+        mainWindowManager.initialize();
 
-        // Обработчик закрытия
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 exitApplication();
             }
         });
-
-        setVisible(true);
     }
 
     // Генерация панели меню
@@ -126,6 +123,7 @@ public class MainApplicationFrame extends JFrame {
                 JOptionPane.QUESTION_MESSAGE);
 
         if (result == JOptionPane.YES_OPTION) {
+            mainWindowManager.saveWindowState();
             windowManager.shutdown();
             robotModel.shutdown();
             dispose();

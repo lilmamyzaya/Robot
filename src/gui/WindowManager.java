@@ -104,18 +104,25 @@ public class WindowManager {
         props.setProperty(name + ".width", String.valueOf(frame.getWidth()));
         props.setProperty(name + ".height", String.valueOf(frame.getHeight()));
         props.setProperty(name + ".visible", String.valueOf(frame.isVisible()));
+        props.setProperty(name + ".icon", String.valueOf(frame.isIcon()));
     }
 
     private void loadInternalFrameState(JInternalFrame frame, String name, Properties props) {
         try {
-            int x = Integer.parseInt(props.getProperty(name + ".x"));
-            int y = Integer.parseInt(props.getProperty(name + ".y"));
-            int width = Integer.parseInt(props.getProperty(name + ".width"));
-            int height = Integer.parseInt(props.getProperty(name + ".height"));
+            int x = Integer.parseInt(props.getProperty(name + ".x", "0"));
+            int y = Integer.parseInt(props.getProperty(name + ".y", "0"));
+            int width = Integer.parseInt(props.getProperty(name + ".width", "400"));
+            int height = Integer.parseInt(props.getProperty(name + ".height", "400"));
             boolean visible = Boolean.parseBoolean(props.getProperty(name + ".visible", "true"));
+            boolean icon = Boolean.parseBoolean(props.getProperty(name + ".icon", "false"));
 
             frame.setBounds(x, y, width, height);
             frame.setVisible(visible);
+            try {
+                frame.setIcon(icon);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
