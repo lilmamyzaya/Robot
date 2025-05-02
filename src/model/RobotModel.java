@@ -20,7 +20,7 @@ public class RobotModel extends Observable {
                 setChanged();
                 notifyObservers();
             }
-        }, 0, 100);
+        }, 0, 30);
     }
 
     private void updatePosition(double duration) {

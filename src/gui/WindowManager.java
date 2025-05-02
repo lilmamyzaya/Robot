@@ -1,35 +1,72 @@
 package gui;
 
+import model.RobotModel;
+import log.Logger;
+
 import javax.swing.*;
-import java.awt.*;
 import java.io.*;
 import java.util.Properties;
 
+
 public class WindowManager {
     private final JDesktopPane desktopPane;
+    private final RobotModel robotModel;
     private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
 
-    public WindowManager(JDesktopPane desktopPane) {
+    public WindowManager(JDesktopPane desktopPane, RobotModel robotModel) {
         this.desktopPane = desktopPane;
+        this.robotModel = robotModel;
+    }
+
+    public void initializeWindows() {
+        // Всегда создаем все окна
+        createAllWindows();
+
+        // Загружаем сохраненное состояние, если есть
+        File configFile = new File(CONFIG_PATH);
+        if (configFile.exists()) {
+            loadWindowState();
+        }
+    }
+
+    private void createAllWindows() {
+        // Удаляем все существующие окна
+        desktopPane.removeAll();
+
+        // Создаем окно логов
+        LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource());
+        logWindow.setTitle("Протокол работы");
+        logWindow.setBounds(10, 10, 500, 500); // Фиксированная позиция по умолчанию
+        addWindow(logWindow);
+
+        // Создаем игровое поле
+        GameVisualizer visualizer = new GameVisualizer(robotModel);
+        GameWindow gameWindow = new GameWindow(visualizer);
+        gameWindow.setTitle("Игровое поле");
+        gameWindow.setBounds(520, 10, 400, 400); // Фиксированная позиция по умолчанию
+        addWindow(gameWindow);
+
+        // Создаем окно координат
+        RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(robotModel);
+        coordsWindow.setTitle("Координаты робота");
+        coordsWindow.setBounds(930, 10, 200, 100); // Фиксированная позиция по умолчанию
+        addWindow(coordsWindow);
     }
 
     public void addWindow(JInternalFrame frame) {
         desktopPane.add(frame);
         frame.setVisible(true);
+        try {
+            frame.setSelected(true);
+        } catch (java.beans.PropertyVetoException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void saveWindowState(JFrame frame) {
+    public void saveWindowState() {
         Properties props = new Properties();
-        int state = frame.getExtendedState();
-        props.setProperty("state", String.valueOf(state));
 
-        if (state == Frame.NORMAL) {
-            props.setProperty("main.x", String.valueOf(frame.getX()));
-            props.setProperty("main.y", String.valueOf(frame.getY()));
-            props.setProperty("main.width", String.valueOf(frame.getWidth()));
-            props.setProperty("main.height", String.valueOf(frame.getHeight()));
-        }
-
+        // Сохраняем состояние всех открытых окон
         for (JInternalFrame internalFrame : desktopPane.getAllFrames()) {
             saveInternalFrameState(internalFrame, internalFrame.getTitle(), props);
         }
@@ -41,36 +78,23 @@ public class WindowManager {
         }
     }
 
-    public void loadWindowState(JFrame frame) {
+    public void loadWindowState() {
         Properties props = new Properties();
-        File configFile = new File(CONFIG_PATH);
-
-        if (!configFile.exists()) {
-            setDefaultBounds(frame);
-            return;
-        }
 
         try (FileInputStream fis = new FileInputStream(CONFIG_PATH)) {
             props.load(fis);
 
-            int state = Integer.parseInt(props.getProperty("state", String.valueOf(JFrame.NORMAL)));
-
-            if (state == Frame.NORMAL) {
-                int x = Integer.parseInt(props.getProperty("main.x", "100"));
-                int y = Integer.parseInt(props.getProperty("main.y", "100"));
-                int width = Integer.parseInt(props.getProperty("main.width", "800"));
-                int height = Integer.parseInt(props.getProperty("main.height", "600"));
-                frame.setBounds(x, y, width, height);
-            }
-
-            frame.setExtendedState(state);
-
+            // Для каждого окна пытаемся загрузить сохраненное состояние
             for (JInternalFrame internalFrame : desktopPane.getAllFrames()) {
-                loadInternalFrameState(internalFrame, internalFrame.getTitle(), props);
+                String title = internalFrame.getTitle();
+                if (props.containsKey(title + ".x")) {
+                    // Если есть сохраненное состояние - восстанавливаем
+                    loadInternalFrameState(internalFrame, title, props);
+                }
+                // Если нет сохраненного состояния - остается с фиксированной позицией
             }
-        } catch (IOException | NumberFormatException e) {
+        } catch (IOException e) {
             e.printStackTrace();
-            setDefaultBounds(frame);
         }
     }
 
@@ -79,27 +103,32 @@ public class WindowManager {
         props.setProperty(name + ".y", String.valueOf(frame.getY()));
         props.setProperty(name + ".width", String.valueOf(frame.getWidth()));
         props.setProperty(name + ".height", String.valueOf(frame.getHeight()));
-        props.setProperty(name + ".icon", String.valueOf(frame.isIcon()));
+        props.setProperty(name + ".visible", String.valueOf(frame.isVisible()));
     }
 
     private void loadInternalFrameState(JInternalFrame frame, String name, Properties props) {
         try {
-            int x = Integer.parseInt(props.getProperty(name + ".x", "50"));
-            int y = Integer.parseInt(props.getProperty(name + ".y", "50"));
-            int width = Integer.parseInt(props.getProperty(name + ".width", "300"));
-            int height = Integer.parseInt(props.getProperty(name + ".height", "300"));
-            boolean icon = Boolean.parseBoolean(props.getProperty(name + ".icon", "false"));
+            int x = Integer.parseInt(props.getProperty(name + ".x"));
+            int y = Integer.parseInt(props.getProperty(name + ".y"));
+            int width = Integer.parseInt(props.getProperty(name + ".width"));
+            int height = Integer.parseInt(props.getProperty(name + ".height"));
+            boolean visible = Boolean.parseBoolean(props.getProperty(name + ".visible", "true"));
 
             frame.setBounds(x, y, width, height);
-            frame.setIcon(icon);
+            frame.setVisible(visible);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void setDefaultBounds(JFrame frame) {
-        int inset = 50;
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        frame.setBounds(inset, inset, screenSize.width - inset * 2, screenSize.height - inset * 2);
+    public void shutdown() {
+        saveWindowState();
+
+        for (JInternalFrame frame : desktopPane.getAllFrames()) {
+            if (frame instanceof GameWindow) {
+                ((GameWindow) frame).shutdown();
+            }
+            frame.dispose();
+        }
     }
 }

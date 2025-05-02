@@ -10,27 +10,23 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-
-
 public class MainApplicationFrame extends JFrame {
     private final JDesktopPane desktopPane = new JDesktopPane();
     private final RobotModel robotModel = new RobotModel();
-    private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
     private final WindowManager windowManager;
 
     public MainApplicationFrame() {
-        // Инициализация
-        windowManager = new WindowManager(desktopPane);
+        windowManager = new WindowManager(desktopPane, robotModel);
         setContentPane(desktopPane);
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
-        // Создаем окна с явным позиционированием
-        createWindowsWithFixedPosition();
-
         // Настройка главного окна
-        setExtendedState(JFrame.MAXIMIZED_BOTH); // Открыть на весь экран
-        setMinimumSize(new Dimension(950, 850)); // Минимальный размер
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setMinimumSize(new Dimension(950, 850));
+
+        // Инициализация окон
+        windowManager.initializeWindows();
 
         // Обработчик закрытия
         addWindowListener(new WindowAdapter() {
@@ -41,38 +37,6 @@ public class MainApplicationFrame extends JFrame {
         });
 
         setVisible(true);
-    }
-
-    // Установка размеров и позиций для окон
-
-    private void createWindowsWithFixedPosition() {
-        // 1. Окно логов
-        LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource());
-        logWindow.setTitle("Протокол работы");
-        logWindow.pack();
-        Logger.debug("Протокол работает");
-        logWindow.setBounds(10, 10, 500, 500);
-        logWindow.setVisible(true);
-        desktopPane.add(logWindow);
-
-        // 2. Игровое поле
-        GameVisualizer visualizer = new GameVisualizer(robotModel);
-        GameWindow gameWindow = new GameWindow(visualizer);
-        gameWindow.setTitle("Игровое поле");
-        gameWindow.setBounds(520, 10, 400, 400);
-        gameWindow.setVisible(true);
-        desktopPane.add(gameWindow);
-
-        // 3. Окно координат
-        RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(robotModel);
-        coordsWindow.setTitle("Координаты робота");
-        coordsWindow.setBounds(930, 10, 200, 100);
-        coordsWindow.setVisible(true);
-        desktopPane.add(coordsWindow);
-
-        // Принудительное обновление
-        desktopPane.revalidate();
-        desktopPane.repaint();
     }
 
     // Генерация панели меню
@@ -162,31 +126,21 @@ public class MainApplicationFrame extends JFrame {
                 JOptionPane.QUESTION_MESSAGE);
 
         if (result == JOptionPane.YES_OPTION) {
-            // Сохраняем состояние окон
-            windowManager.saveWindowState(this);
-
-            // Завершаем работу модели робота
+            windowManager.shutdown();
             robotModel.shutdown();
-
-            // Закрываем все внутренние окна
-            for (JInternalFrame frame : desktopPane.getAllFrames()) {
-                if (frame instanceof GameWindow) {
-                    ((GameWindow) frame).shutdown();
-                }
-                frame.dispose();
-            }
-
-            // Закрываем главное окно
             dispose();
 
-            // Проверка на полное завершение (оригинальная логика)
             EventQueue.invokeLater(() -> {
+                boolean allWindowsClosed = true;
                 for (Window window : Window.getWindows()) {
                     if (window.isDisplayable()) {
-                        return;
+                        allWindowsClosed = false;
+                        break;
                     }
                 }
-                // System.exit(0) удалён по вашему требованию
+                if (allWindowsClosed) {
+                    Logger.debug("Все окна закрыты, приложение завершено");
+                }
             });
         }
     }
