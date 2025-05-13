@@ -14,11 +14,9 @@ public class MainApplicationFrame extends JFrame {
     private final JDesktopPane desktopPane = new JDesktopPane();
     private final RobotModel robotModel = new RobotModel();
     private final WindowManager windowManager;
-    private final MainWindowManager mainWindowManager;
 
     public MainApplicationFrame() {
         windowManager = new WindowManager(desktopPane, robotModel);
-        mainWindowManager = new MainWindowManager(this);
 
         setContentPane(desktopPane);
         setJMenuBar(generateMenuBar());
@@ -26,7 +24,7 @@ public class MainApplicationFrame extends JFrame {
 
         // Инициализация окон
         windowManager.initializeWindows();
-        mainWindowManager.initialize();
+        windowManager.loadWindowState(this);
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -110,7 +108,6 @@ public class MainApplicationFrame extends JFrame {
     }
 
     private void exitApplication() {
-        // Настройка текста кнопок для диалога
         UIManager.put("OptionPane.yesButtonText", "Да");
         UIManager.put("OptionPane.noButtonText", "Нет");
         UIManager.put("OptionPane.cancelButtonText", "Отмена");
@@ -123,7 +120,7 @@ public class MainApplicationFrame extends JFrame {
                 JOptionPane.QUESTION_MESSAGE);
 
         if (result == JOptionPane.YES_OPTION) {
-            mainWindowManager.saveWindowState();
+            windowManager.saveWindowState(this);
             windowManager.shutdown();
             robotModel.shutdown();
             dispose();
