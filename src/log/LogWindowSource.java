@@ -8,13 +8,11 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LogWindowSource {
-    private final int queueCapacity;
-    private final List<LogEntry> messages;
-    private final List<LogChangeListener> listeners;
+    private final CircularLogBuffer buffer; // Публичное поле
+    private final CopyOnWriteArrayList<LogChangeListener> listeners;
 
     public LogWindowSource(int queueCapacity) {
-        this.queueCapacity = queueCapacity;
-        this.messages = Collections.synchronizedList(new LinkedList<>());
+        this.buffer = new CircularLogBuffer(queueCapacity);
         this.listeners = new CopyOnWriteArrayList<>();
     }
 
@@ -29,12 +27,7 @@ public class LogWindowSource {
     }
 
     public void append(LogLevel logLevel, String strMessage) {
-        synchronized (messages) {
-            if (messages.size() >= queueCapacity) {
-                messages.remove(0);
-            }
-            messages.add(new LogEntry(logLevel, strMessage));
-        }
+        buffer.append(logLevel, strMessage);
         notifyListeners();
     }
 
@@ -45,24 +38,18 @@ public class LogWindowSource {
     }
 
     public int size() {
-        synchronized (messages) {
-            return messages.size();
-        }
+        return buffer.size();
     }
 
     public Iterable<LogEntry> range(int startFrom, int count) {
-        synchronized (messages) {
-            if (startFrom < 0 || startFrom >= messages.size()) {
-                return Collections.emptyList();
-            }
-            int endIndex = Math.min(startFrom + count, messages.size());
-            return new LinkedList<>(messages.subList(startFrom, endIndex));
-        }
+        return buffer.range(startFrom, count);
     }
 
     public Iterable<LogEntry> all() {
-        synchronized (messages) {
-            return new LinkedList<>(messages);
-        }
+        return buffer.all();
+    }
+
+    public CircularLogBuffer getBuffer() {
+        return buffer;
     }
 }

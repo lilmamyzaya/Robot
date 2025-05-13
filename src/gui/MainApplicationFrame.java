@@ -16,6 +16,10 @@ public class MainApplicationFrame extends JFrame {
     private final WindowManager windowManager;
 
     public MainApplicationFrame() {
+        Logger.debug("Test debug message");
+        Logger.info("Test info message");
+        Logger.error("Test error message");
+
         windowManager = new WindowManager(desktopPane, robotModel);
 
         setContentPane(desktopPane);
