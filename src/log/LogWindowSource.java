@@ -1,14 +1,9 @@
 package log;
 
-// Управляет хранением сообщений и уведомляет подписчиков
-
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LogWindowSource {
-    private final CircularLogBuffer buffer; // Публичное поле
+    private final CircularLogBuffer buffer;
     private final CopyOnWriteArrayList<LogChangeListener> listeners;
 
     public LogWindowSource(int queueCapacity) {

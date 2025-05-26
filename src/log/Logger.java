@@ -3,7 +3,7 @@ package log;
 // Упрощает запись в лог, предоставляя методы для каждого уровня
 
 public final class Logger {
-    private static final LogWindowSource defaultLogSource = new LogWindowSource(1000);
+    private static final LogWindowSource defaultLogSource = new LogWindowSource(20); // Размер буфера
 
     private Logger() {}
 

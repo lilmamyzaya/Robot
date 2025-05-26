@@ -3,15 +3,15 @@ package log;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 // Кольцевой буфер для хранения логов с потокобезопасностью
-
 public class CircularLogBuffer implements Iterable<LogEntry> {
     private final LogEntry[] buffer; // Массив для хранения записей
     private final int capacity; // Максимальная ёмкость
     private int head; // Индекс начала (где хранится самая старая запись)
     private int size; // Текущее количество записей
-    private final Object lock = new Object(); // Для синхронизации
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(); // Для синхронизации
 
     public CircularLogBuffer(int capacity) {
         if (capacity <= 0) {
@@ -26,7 +26,8 @@ public class CircularLogBuffer implements Iterable<LogEntry> {
     // Добавление записи (вытесняет старую, если буфер полон)
     public void append(LogLevel logLevel, String message) {
         LogEntry entry = new LogEntry(logLevel, message);
-        synchronized (lock) {
+        lock.writeLock().lock();
+        try {
             int index = (head + size) % capacity;
             buffer[index] = entry;
             if (size < capacity) {
@@ -34,19 +35,25 @@ public class CircularLogBuffer implements Iterable<LogEntry> {
             } else {
                 head = (head + 1) % capacity; // Сдвигаем начало, вытесняя старую запись
             }
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 
     // Текущий размер буфера
     public int size() {
-        synchronized (lock) {
+        lock.readLock().lock();
+        try {
             return size;
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
     // Получение сегмента записей (от startFrom до startFrom + count)
     public Iterable<LogEntry> range(int startFrom, int count) {
-        synchronized (lock) {
+        lock.readLock().lock();
+        try {
             if (startFrom < 0 || startFrom >= size || count <= 0) {
                 return Collections.emptyList();
             }
@@ -56,7 +63,10 @@ public class CircularLogBuffer implements Iterable<LogEntry> {
             for (int i = 0; i < actualCount; i++) {
                 result[i] = buffer[(head + startFrom + i) % capacity];
             }
-            return Arrays.asList(result); // Возвращаем неизменяемую копию
+            // Возвращаем Iterable на основе массива
+            return () -> Arrays.stream(result).iterator();
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
