@@ -15,6 +15,7 @@ public class MainApplicationFrame extends JFrame {
     private final RobotModel robotModel = new RobotModel();
     private final WindowManager windowManager;
 
+    // Создание окон
     public MainApplicationFrame() {
         Logger.debug("Test debug message");
         Logger.info("Test info message");
@@ -26,7 +27,6 @@ public class MainApplicationFrame extends JFrame {
         setJMenuBar(generateMenuBar());
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
-        // Инициализация окон
         windowManager.initializeWindows();
         windowManager.loadWindowState(this);
 
@@ -39,7 +39,6 @@ public class MainApplicationFrame extends JFrame {
     }
 
     // Генерация панели меню
-
     private JMenuBar generateMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(createLookAndFeelMenu());
@@ -49,7 +48,6 @@ public class MainApplicationFrame extends JFrame {
     }
 
     // Меню управления стилем отображения
-
     private JMenu createLookAndFeelMenu() {
         JMenu menu = new JMenu("Режим отображения");
         menu.setMnemonic(KeyEvent.VK_V);
@@ -65,7 +63,6 @@ public class MainApplicationFrame extends JFrame {
     }
 
     // Тестовое меню с командами
-
     private JMenu createTestMenu() {
         JMenu menu = new JMenu("Тесты");
         menu.setMnemonic(KeyEvent.VK_T);
@@ -78,7 +75,6 @@ public class MainApplicationFrame extends JFrame {
     }
 
     // Метод для создания пунктов меню
-
     private JMenuItem createMenuItem(String title, int mnemonic, Runnable action) {
         JMenuItem item = new JMenuItem(title, mnemonic);
         item.addActionListener(event -> action.run());
@@ -86,7 +82,6 @@ public class MainApplicationFrame extends JFrame {
     }
 
     // Стиль отображения
-
     private void setLookAndFeel(String className) {
         try {
             UIManager.setLookAndFeel(className);
@@ -97,7 +92,6 @@ public class MainApplicationFrame extends JFrame {
     }
 
     // Метод выхода
-
     private JMenu createFileMenu() {
         JMenu menu = new JMenu("Файл");
         menu.setMnemonic(KeyEvent.VK_F);
@@ -111,6 +105,7 @@ public class MainApplicationFrame extends JFrame {
         return menu;
     }
 
+    // Закрытие приложения
     private void exitApplication() {
         UIManager.put("OptionPane.yesButtonText", "Да");
         UIManager.put("OptionPane.noButtonText", "Нет");
