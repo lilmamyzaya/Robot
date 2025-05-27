@@ -12,31 +12,35 @@ public class WindowManager {
     private final JDesktopPane desktopPane;
     private final RobotModel robotModel;
     private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
-    private static final Dimension NORMAL_SIZE = new Dimension(950, 850); // Нормальный размер окна
+    private static final Dimension NORMAL_SIZE = new Dimension(950, 850);
+    private final LocalizationManager localizationManager;
 
     public WindowManager(JDesktopPane desktopPane, RobotModel robotModel) {
         this.desktopPane = desktopPane;
         this.robotModel = robotModel;
+        this.localizationManager = LocalizationManager.getInstance();
     }
 
     public void initializeWindows() {
         desktopPane.removeAll();
 
         LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource());
-        logWindow.setTitle("Протокол работы");
         logWindow.setBounds(10, 10, 500, 500);
         addWindow(logWindow);
 
         GameVisualizer visualizer = new GameVisualizer(robotModel);
         GameWindow gameWindow = new GameWindow(visualizer);
-        gameWindow.setTitle("Игровое поле");
         gameWindow.setBounds(520, 10, 400, 400);
         addWindow(gameWindow);
 
         RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(robotModel);
-        coordsWindow.setTitle("Координаты робота");
         coordsWindow.setBounds(930, 10, 200, 100);
         addWindow(coordsWindow);
+
+        for (JInternalFrame frame : desktopPane.getAllFrames()) {
+            System.out.println("Updating UI for internal frame: " + frame.getClass().getSimpleName());
+            localizationManager.updateUI(frame);
+        }
     }
 
     public void addWindow(JInternalFrame frame) {
@@ -45,7 +49,7 @@ public class WindowManager {
         try {
             frame.setSelected(true);
         } catch (java.beans.PropertyVetoException e) {
-            Logger.error("Ошибка при выборе окна: " + e.getMessage());
+            Logger.error(localizationManager.getString("window.selection.error") + ": " + e.getMessage());
         }
     }
 
@@ -61,24 +65,27 @@ public class WindowManager {
             props.setProperty("main.y", String.valueOf(frame.getY()));
             props.setProperty("main.width", String.valueOf(width));
             props.setProperty("main.height", String.valueOf(height));
-            Logger.debug("Сохранено состояние NORMAL: x=" + frame.getX() + ", y=" + frame.getY() + ", width=" + width + ", height=" + height);
+            Logger.debug(localizationManager.getString("saved.normal.state") + ": x=" + frame.getX() + ", y=" + frame.getY() + ", width=" + width + ", height=" + height);
         } else {
-            Logger.debug("Сохранено состояние: state=" + state);
+            Logger.debug(localizationManager.getString("saved.state") + ": state=" + state);
         }
 
         for (JInternalFrame internalFrame : desktopPane.getAllFrames()) {
-            saveInternalFrameState(internalFrame, internalFrame.getTitle(), props);
+            String translationKey = (String) internalFrame.getClientProperty("translationKey");
+            if (translationKey != null) {
+                saveInternalFrameState(internalFrame, translationKey, props);
+            }
         }
 
         try {
             File configFile = new File(CONFIG_PATH);
             configFile.getParentFile().mkdirs();
             try (FileOutputStream fos = new FileOutputStream(configFile)) {
-                props.store(fos, "Window State Configuration");
-                Logger.debug("Конфигурация сохранена в " + CONFIG_PATH);
+                props.store(fos, localizationManager.getString("window.state.config.comment"));
+                Logger.debug(localizationManager.getString("config.saved") + " " + CONFIG_PATH);
             }
         } catch (IOException e) {
-            Logger.error("Ошибка сохранения состояния окна: " + e.getMessage());
+            Logger.error(localizationManager.getString("window.state.save.error") + ": " + e.getMessage());
         }
     }
 
@@ -88,11 +95,10 @@ public class WindowManager {
 
         frame.setMinimumSize(NORMAL_SIZE);
 
-        // Слушатель для центрирования при восстановлении из развёрнутого или свёрнутого состояния
         frame.addWindowStateListener(e -> {
             int oldState = e.getOldState();
             int newState = e.getNewState();
-            Logger.debug("Состояние окна изменилось: старое=" + oldState + ", новое=" + newState);
+            Logger.debug(localizationManager.getString("window.state.changed") + ": " + localizationManager.getString("old.state") + "=" + oldState + ", " + localizationManager.getString("new.state") + "=" + newState);
             if ((newState == Frame.NORMAL) &&
                     (oldState == Frame.MAXIMIZED_BOTH || oldState == Frame.ICONIFIED)) {
                 frame.setSize(NORMAL_SIZE);
@@ -103,7 +109,7 @@ public class WindowManager {
 
         if (!configFile.exists()) {
             frame.setExtendedState(Frame.MAXIMIZED_BOTH);
-            Logger.debug("Первый запуск: окно развёрнуто на весь экран");
+            Logger.debug(localizationManager.getString("first.launch.maximized"));
             return;
         }
 
@@ -111,7 +117,7 @@ public class WindowManager {
             props.load(fis);
 
             int state = Integer.parseInt(props.getProperty("main.state", String.valueOf(Frame.MAXIMIZED_BOTH)));
-            Logger.debug("Загружено состояние окна: state=" + state);
+            Logger.debug(localizationManager.getString("loaded.window.state") + ": state=" + state);
             frame.setExtendedState(state);
 
             if (state == Frame.NORMAL) {
@@ -124,23 +130,25 @@ public class WindowManager {
                 height = Math.max(height, NORMAL_SIZE.height);
 
                 Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-                // Если координаты выходят за пределы экрана, центрируем окно
                 if (x < 0 || y < 0 || x + width > screenSize.width || y + height > screenSize.height) {
-                    Logger.debug("Некорректные координаты (x=" + x + ", y=" + y + "), центрируем окно");
+                    Logger.debug(localizationManager.getString("invalid.coordinates") + " (x=" + x + ", y=" + y + "), " + localizationManager.getString("center.window"));
                     centerWindow(frame);
                 } else {
                     frame.setBounds(x, y, width, height);
-                    Logger.debug("Установлены сохранённые координаты: x=" + x + ", y=" + y + ", width=" + width + ", height=" + height);
+                    Logger.debug(localizationManager.getString("set.saved.coordinates") + ": x=" + x + ", y=" + y + ", width=" + width + ", height=" + height);
                 }
             }
 
             for (JInternalFrame internalFrame : desktopPane.getAllFrames()) {
-                loadInternalFrameState(internalFrame, internalFrame.getTitle(), props);
+                String translationKey = (String) internalFrame.getClientProperty("translationKey");
+                if (translationKey != null) {
+                    loadInternalFrameState(internalFrame, translationKey, props);
+                }
             }
         } catch (IOException | NumberFormatException e) {
-            Logger.error("Ошибка загрузки состояния окна: " + e.getMessage());
+            Logger.error(localizationManager.getString("window.state.load.error") + ": " + e.getMessage());
             frame.setExtendedState(Frame.MAXIMIZED_BOTH);
-            Logger.debug("Ошибка загрузки, окно развёрнуто на весь экран");
+            Logger.debug(localizationManager.getString("load.error.maximized"));
         }
     }
 
@@ -163,7 +171,7 @@ public class WindowManager {
             frame.setBounds(x, y, width, height);
             frame.setIcon(icon);
         } catch (Exception e) {
-            Logger.error("Ошибка загрузки состояния внутреннего окна: " + e.getMessage());
+            Logger.error(localizationManager.getString("internal.window.load.error") + ": " + e.getMessage());
         }
     }
 
@@ -172,7 +180,7 @@ public class WindowManager {
         int x = (screenSize.width - frame.getWidth()) / 2;
         int y = (screenSize.height - frame.getHeight()) / 2;
         frame.setLocation(x, y);
-        Logger.debug("Центрирование окна: x=" + x + ", y=" + y);
+        Logger.debug(localizationManager.getString("centering.window") + ": x=" + x + ", y=" + y);
     }
 
     public void shutdown() {

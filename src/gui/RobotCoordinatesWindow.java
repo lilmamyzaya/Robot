@@ -8,15 +8,24 @@ import java.util.Observer;
 
 public class RobotCoordinatesWindow extends JInternalFrame implements Observer {
     private final JLabel coordsLabel;
+    private final LocalizationManager localizationManager;
 
     public RobotCoordinatesWindow(RobotModel model) {
-        super("Координаты робота", true, true, true, true);
+        super("", true, true, true, true);
+        localizationManager = LocalizationManager.getInstance();
+
+        putClientProperty("translationKey", "coordinates.window.title");
+        System.out.println("RobotCoordinatesWindow created with translationKey: coordinates.window.title");
+
         coordsLabel = new JLabel();
         add(coordsLabel);
         model.addObserver(this);
         setSize(200, 100);
         setLocation(100, 100);
         setVisible(true);
+
+        update(null, null); // Инициализация текста
+        localizationManager.updateUI(this);
     }
 
     @Override
@@ -26,4 +35,3 @@ public class RobotCoordinatesWindow extends JInternalFrame implements Observer {
         }
     }
 }
-

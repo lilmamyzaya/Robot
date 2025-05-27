@@ -13,12 +13,17 @@ public class LogWindow extends JInternalFrame implements LogChangeListener {
     private final LogWindowSource logSource;
     private final JTextArea logContent;
     private final Timer updateTimer;
-    private LogLevel currentFilterLevel = LogLevel.Trace; // По умолчанию показываем все уровни
+    private LogLevel currentFilterLevel = LogLevel.Trace;
+    private final LocalizationManager localizationManager;
 
     public LogWindow(LogWindowSource logSource) {
-        super("Протокол работы", true, true, true, true);
+        super("", true, true, true, true);
         this.logSource = logSource;
         this.logSource.registerListener(this);
+        this.localizationManager = LocalizationManager.getInstance();
+
+        putClientProperty("translationKey", "log.window.title");
+        System.out.println("LogWindow created with translationKey: log.window.title");
 
         logContent = new JTextArea();
         logContent.setEditable(false);
@@ -27,26 +32,30 @@ public class LogWindow extends JInternalFrame implements LogChangeListener {
         JScrollPane scrollPane = new JScrollPane(logContent);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 
-        // Панель с фильтрами и кнопками
         JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-        // 1. Фильтр по уровню логирования
         JComboBox<LogLevel> levelFilter = new JComboBox<>(LogLevel.values());
         levelFilter.setSelectedItem(LogLevel.Trace);
         levelFilter.addActionListener(e -> {
             currentFilterLevel = (LogLevel) levelFilter.getSelectedItem();
             updateLogContent();
         });
-        controlPanel.add(new JLabel("Уровень:"));
+        JLabel levelLabel = new JLabel();
+        levelLabel.putClientProperty("translationKey", "level.label");
+        System.out.println("Level label created with translationKey: level.label");
+        levelLabel.getAccessibleContext().setAccessibleName("level.label");
+        controlPanel.add(levelLabel);
         controlPanel.add(levelFilter);
 
-        // 2. Кнопка очистки
-        JButton clearButton = new JButton("Очистить");
+        JButton clearButton = new JButton();
+        clearButton.putClientProperty("translationKey", "clear.button");
+        System.out.println("Clear button created with translationKey: clear.button");
         clearButton.addActionListener(e -> logContent.setText(""));
         controlPanel.add(clearButton);
 
-        // 3. Кнопка сохранения в файл
-        JButton saveButton = new JButton("Сохранить в файл");
+        JButton saveButton = new JButton();
+        saveButton.putClientProperty("translationKey", "save.button");
+        System.out.println("Save button created with translationKey: save.button");
         saveButton.addActionListener(this::saveLogToFile);
         controlPanel.add(saveButton);
 
@@ -60,6 +69,8 @@ public class LogWindow extends JInternalFrame implements LogChangeListener {
         updateTimer = new Timer(100, e -> updateLogContent());
         updateTimer.setRepeats(false);
         updateLogContent();
+
+        localizationManager.updateUI(this);
     }
 
     private void updateLogContent() {
@@ -76,7 +87,7 @@ public class LogWindow extends JInternalFrame implements LogChangeListener {
 
     private void saveLogToFile(ActionEvent e) {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Сохранить лог как...");
+        fileChooser.setDialogTitle(localizationManager.getString("save.log.title"));
         fileChooser.setSelectedFile(new File("robot_log.txt"));
 
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -86,12 +97,13 @@ public class LogWindow extends JInternalFrame implements LogChangeListener {
                     writer.printf("[%s] %s%n",
                             entry.getLevel().name(), entry.getMessage());
                 }
-                Logger.debug("Лог сохранён в: " + file.getAbsolutePath());
+                Logger.debug(localizationManager.getString("log.saved.message") + ": " + file.getAbsolutePath());
             } catch (IOException ex) {
-                Logger.error("Ошибка сохранения лога: " + ex.getMessage());
+                Logger.error(localizationManager.getString("log.save.error") + ": " + ex.getMessage());
                 JOptionPane.showMessageDialog(this,
-                        "Ошибка при сохранении файла",
-                        "Ошибка", JOptionPane.ERROR_MESSAGE);
+                        localizationManager.getString("log.save.error.message"),
+                        localizationManager.getString("error.title"),
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
