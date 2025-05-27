@@ -51,7 +51,7 @@ public class MainApplicationFrame extends JFrame {
         menuBar.add(createLookAndFeelMenu());
         menuBar.add(createTestMenu());
         menuBar.add(createFileMenu());
-        localizationManager.updateUI(menuBar);
+        localizationManager.updateUI(menuBar); // Обновляем меню после создания
         return menuBar;
     }
 
@@ -79,9 +79,9 @@ public class MainApplicationFrame extends JFrame {
         menu.putClientProperty("translationKey", "test.menu");
         menu.getAccessibleContext().setAccessibleDescription(localizationManager.getString("test.menu.description"));
 
-        menu.add(createMenuItem("log.message", KeyEvent.VK_L,
-                () -> Logger.debug(localizationManager.getString("new.line.message"))));
-
+        JMenuItem logMessageItem = createMenuItem("log.message", KeyEvent.VK_L,
+                () -> Logger.debug(localizationManager.getString("new.line.message")));
+        menu.add(logMessageItem);
         return menu;
     }
 
@@ -90,7 +90,9 @@ public class MainApplicationFrame extends JFrame {
         JMenuItem item = new JMenuItem();
         item.setMnemonic(mnemonic);
         item.putClientProperty("translationKey", translationKey);
+        System.out.println("Created JMenuItem with translationKey: " + translationKey);
         item.addActionListener(event -> action.run());
+        localizationManager.updateUI(item);
         return item;
     }
 
@@ -104,7 +106,7 @@ public class MainApplicationFrame extends JFrame {
         }
     }
 
-    // Метод выхода
+    // Метод выхода и смены языка
     private JMenu createFileMenu() {
         JMenu menu = new JMenu();
         menu.setMnemonic(KeyEvent.VK_F);
@@ -113,10 +115,19 @@ public class MainApplicationFrame extends JFrame {
 
         JMenu languageMenu = new JMenu();
         languageMenu.putClientProperty("translationKey", "language.menu");
-        JMenuItem russianItem = new JMenuItem("Русский");
+        localizationManager.updateUI(languageMenu); // Обновляем Language меню
+
+        // Локализуем пункты "Русский" и "English"
+        JMenuItem russianItem = new JMenuItem();
+        russianItem.putClientProperty("translationKey", "language.russian");
         russianItem.addActionListener(e -> changeLocale(new Locale("ru")));
-        JMenuItem englishItem = new JMenuItem("English");
+        localizationManager.updateUI(russianItem);
+
+        JMenuItem englishItem = new JMenuItem();
+        englishItem.putClientProperty("translationKey", "language.english");
         englishItem.addActionListener(e -> changeLocale(new Locale("en")));
+        localizationManager.updateUI(englishItem);
+
         languageMenu.add(russianItem);
         languageMenu.add(englishItem);
         menu.add(languageMenu);
@@ -126,6 +137,7 @@ public class MainApplicationFrame extends JFrame {
         exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
         exitItem.putClientProperty("translationKey", "exit.item");
         exitItem.addActionListener(event -> exitApplication());
+        localizationManager.updateUI(exitItem); // Обновляем Exit
         menu.add(exitItem);
 
         return menu;
@@ -133,7 +145,11 @@ public class MainApplicationFrame extends JFrame {
 
     private void changeLocale(Locale locale) {
         localizationManager.setLocale(locale);
-        localizationManager.updateUI(this);
+        // Обновляем весь интерфейс
+        localizationManager.updateUI(this); // Обновляем главный фрейм и меню
+        for (JInternalFrame frame : desktopPane.getAllFrames()) {
+            localizationManager.updateUI(frame); // Обновляем все внутренние фреймы
+        }
     }
 
     // Закрытие приложения

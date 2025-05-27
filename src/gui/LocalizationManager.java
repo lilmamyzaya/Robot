@@ -68,16 +68,28 @@ public class LocalizationManager {
                     ((JLabel) component).setText(getString(translationKey));
                 } else if (component instanceof JMenu) {
                     ((JMenu) component).setText(getString(translationKey));
+                    component.revalidate();
+                    component.repaint();
                 } else if (component instanceof JMenuItem) {
                     ((JMenuItem) component).setText(getString(translationKey));
+                    component.revalidate();
+                    component.repaint();
                 } else if (component instanceof JInternalFrame) {
                     ((JInternalFrame) component).setTitle(getString(translationKey));
+                    System.out.println("Set JInternalFrame title to: " + getString(translationKey));
                 }
             } else {
                 System.out.println("No translationKey found for component: " + jComponent.getClass().getSimpleName());
             }
 
-            // Рекурсивно обновляем дочерние компоненты
+            // Специальная обработка для JMenu: используем getMenuComponents() для доступа к подэлементам
+            if (component instanceof JMenu) {
+                for (Component menuChild : ((JMenu) component).getMenuComponents()) {
+                    updateUI(menuChild);
+                }
+            }
+
+            // Рекурсивный обход остальных дочерних компонентов
             for (Component child : jComponent.getComponents()) {
                 updateUI(child);
             }
