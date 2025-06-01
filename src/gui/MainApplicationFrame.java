@@ -24,7 +24,7 @@ public class MainApplicationFrame extends JFrame {
         Logger.error("Test error message");
 
         windowManager = new WindowManager(desktopPane, robotModel);
-        localizationManager = LocalizationManager.getInstance();
+        localizationManager = LocalizationManager.getInstance(windowManager);
 
         setContentPane(desktopPane);
         setJMenuBar(generateMenuBar());
@@ -90,7 +90,6 @@ public class MainApplicationFrame extends JFrame {
         JMenuItem item = new JMenuItem();
         item.setMnemonic(mnemonic);
         item.putClientProperty("translationKey", translationKey);
-        System.out.println("Created JMenuItem with translationKey: " + translationKey);
         item.addActionListener(event -> action.run());
         localizationManager.updateUI(item);
         return item;
@@ -115,17 +114,20 @@ public class MainApplicationFrame extends JFrame {
 
         JMenu languageMenu = new JMenu();
         languageMenu.putClientProperty("translationKey", "language.menu");
-        localizationManager.updateUI(languageMenu); // Обновляем Language меню
+        localizationManager.updateUI(languageMenu);
 
-        // Локализуем пункты "Русский" и "English"
         JMenuItem russianItem = new JMenuItem();
         russianItem.putClientProperty("translationKey", "language.russian");
-        russianItem.addActionListener(e -> changeLocale(new Locale("ru")));
+        russianItem.addActionListener(e -> {
+            changeLocale(new Locale("ru"));
+        });
         localizationManager.updateUI(russianItem);
 
         JMenuItem englishItem = new JMenuItem();
         englishItem.putClientProperty("translationKey", "language.english");
-        englishItem.addActionListener(e -> changeLocale(new Locale("en")));
+        englishItem.addActionListener(e -> {
+            changeLocale(new Locale("en"));
+        });
         localizationManager.updateUI(englishItem);
 
         languageMenu.add(russianItem);
@@ -137,7 +139,7 @@ public class MainApplicationFrame extends JFrame {
         exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
         exitItem.putClientProperty("translationKey", "exit.item");
         exitItem.addActionListener(event -> exitApplication());
-        localizationManager.updateUI(exitItem); // Обновляем Exit
+        localizationManager.updateUI(exitItem);
         menu.add(exitItem);
 
         return menu;
@@ -145,10 +147,9 @@ public class MainApplicationFrame extends JFrame {
 
     private void changeLocale(Locale locale) {
         localizationManager.setLocale(locale);
-        // Обновляем весь интерфейс
-        localizationManager.updateUI(this); // Обновляем главный фрейм и меню
+        localizationManager.updateUI(this);
         for (JInternalFrame frame : desktopPane.getAllFrames()) {
-            localizationManager.updateUI(frame); // Обновляем все внутренние фреймы
+            localizationManager.updateUI(frame);
         }
     }
 

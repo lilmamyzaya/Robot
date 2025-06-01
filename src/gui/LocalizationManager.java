@@ -2,56 +2,98 @@ package gui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.function.BiConsumer;
 
 public class LocalizationManager {
     private static LocalizationManager instance;
     private Locale currentLocale;
     private ResourceBundle messages;
 
-    private LocalizationManager() {
-        currentLocale = new Locale("ru"); // По умолчанию русский
-        loadLocale(currentLocale);
+    private final Map<Class<? extends Component>, BiConsumer<Component, String>> translationActions;
+
+    private static final String LOCALE_KEY = "locale";
+    private final WindowManager windowManager;
+
+    // Маппинг типов компонентов на действия для установки текста
+    private LocalizationManager(WindowManager windowManager) {
+        this.windowManager = windowManager;
+        currentLocale = loadSavedLocale();
+        if (currentLocale == null) {
+            currentLocale = new Locale("ru"); // Русский по умолчанию при первом запуске
+        }
+
+        translationActions = new HashMap<>();
+        translationActions.put(JButton.class, (component, text) -> ((JButton) component).setText(text));
+        translationActions.put(JLabel.class, (component, text) -> ((JLabel) component).setText(text));
+        translationActions.put(JMenu.class, (component, text) -> {
+            ((JMenu) component).setText(text);
+            component.revalidate();
+            component.repaint();
+        });
+        translationActions.put(JMenuItem.class, (component, text) -> {
+            ((JMenuItem) component).setText(text);
+            component.revalidate();
+            component.repaint();
+        });
+        translationActions.put(JInternalFrame.class, (component, text) -> {
+            ((JInternalFrame) component).setTitle(text);
+        });
     }
 
-    public static LocalizationManager getInstance() {
+    public static LocalizationManager getInstance(WindowManager windowManager) {
         if (instance == null) {
-            instance = new LocalizationManager();
+            instance = new LocalizationManager(windowManager);
         }
         return instance;
     }
 
     public void setLocale(Locale locale) {
         currentLocale = locale;
-        loadLocale(locale);
+        messages = null; // Сбрасываем текущий ResourceBundle
+        saveLocale(locale); // Сохраняем выбранную локаль
     }
 
     public Locale getCurrentLocale() {
         return currentLocale;
     }
 
-    private void loadLocale(Locale locale) {
-        try {
-            System.out.println("Attempting to load ResourceBundle for locale: " + locale);
-            messages = ResourceBundle.getBundle("messages", locale);
-            System.out.println("Successfully loaded ResourceBundle for locale: " + locale);
-        } catch (Exception e) {
-            System.err.println("Failed to load ResourceBundle for locale: " + locale);
-            e.printStackTrace();
-            messages = ResourceBundle.getBundle("messages", Locale.ENGLISH); // Резервный вариант
+    private void loadLocaleIfNeeded() {
+        if (messages == null) {
+            try {
+                messages = ResourceBundle.getBundle("messages", currentLocale);
+            } catch (Exception e) {
+                System.err.println("Failed to load ResourceBundle for locale: " + currentLocale);
+                e.printStackTrace();
+                messages = ResourceBundle.getBundle("messages", Locale.ENGLISH); // Резервный вариант
+            }
         }
     }
 
     public String getString(String key) {
+        loadLocaleIfNeeded();
         try {
             String value = messages.getString(key);
-            System.out.println("Retrieved translation for key '" + key + "': " + value);
             return value;
         } catch (Exception e) {
             System.err.println("Missing translation for key: " + key);
             return key; // Возвращаем ключ как запасной вариант
         }
+    }
+
+    private void saveLocale(Locale locale) {
+        windowManager.saveLocale(locale.getLanguage());
+    }
+
+    private Locale loadSavedLocale() {
+        String language = windowManager.loadLocale();
+        if (language != null && !language.isEmpty()) {
+            return new Locale(language);
+        }
+        return null;
     }
 
     public void updateUI(Component component) {
@@ -61,47 +103,28 @@ public class LocalizationManager {
             JComponent jComponent = (JComponent) component;
             String translationKey = (String) jComponent.getClientProperty("translationKey");
             if (translationKey != null) {
-                System.out.println("Updating component " + jComponent.getClass().getSimpleName() + " with translationKey: " + translationKey);
-                if (component instanceof JButton) {
-                    ((JButton) component).setText(getString(translationKey));
-                } else if (component instanceof JLabel) {
-                    ((JLabel) component).setText(getString(translationKey));
-                } else if (component instanceof JMenu) {
-                    ((JMenu) component).setText(getString(translationKey));
-                    component.revalidate();
-                    component.repaint();
-                } else if (component instanceof JMenuItem) {
-                    ((JMenuItem) component).setText(getString(translationKey));
-                    component.revalidate();
-                    component.repaint();
-                } else if (component instanceof JInternalFrame) {
-                    ((JInternalFrame) component).setTitle(getString(translationKey));
-                    System.out.println("Set JInternalFrame title to: " + getString(translationKey));
-                }
-            } else {
-                System.out.println("No translationKey found for component: " + jComponent.getClass().getSimpleName());
+                translationActions.entrySet().stream()
+                        .filter(entry -> entry.getKey().isInstance(component))
+                        .findFirst()
+                        .ifPresent(entry -> entry.getValue().accept(component, getString(translationKey)));
             }
 
-            // Специальная обработка для JMenu: используем getMenuComponents() для доступа к подэлементам
             if (component instanceof JMenu) {
                 for (Component menuChild : ((JMenu) component).getMenuComponents()) {
                     updateUI(menuChild);
                 }
             }
 
-            // Рекурсивный обход остальных дочерних компонентов
             for (Component child : jComponent.getComponents()) {
                 updateUI(child);
             }
         }
 
-        // Обновляем заголовки JFrame
         if (component instanceof JFrame) {
             JFrame frame = (JFrame) component;
             JRootPane rootPane = frame.getRootPane();
             String titleKey = (String) rootPane.getClientProperty("translationKey");
             if (titleKey != null) {
-                System.out.println("Updating JFrame title with translationKey: " + titleKey);
                 frame.setTitle(getString(titleKey));
             }
             updateUI(frame.getJMenuBar());

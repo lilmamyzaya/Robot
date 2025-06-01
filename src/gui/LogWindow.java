@@ -16,14 +16,13 @@ public class LogWindow extends JInternalFrame implements LogChangeListener {
     private LogLevel currentFilterLevel = LogLevel.Trace;
     private final LocalizationManager localizationManager;
 
-    public LogWindow(LogWindowSource logSource) {
+    public LogWindow(LogWindowSource logSource, WindowManager windowManager) {
         super("", true, true, true, true);
         this.logSource = logSource;
         this.logSource.registerListener(this);
-        this.localizationManager = LocalizationManager.getInstance();
+        this.localizationManager = LocalizationManager.getInstance(windowManager);
 
         putClientProperty("translationKey", "log.window.title");
-        System.out.println("LogWindow created with translationKey: log.window.title");
 
         logContent = new JTextArea();
         logContent.setEditable(false);
@@ -42,20 +41,17 @@ public class LogWindow extends JInternalFrame implements LogChangeListener {
         });
         JLabel levelLabel = new JLabel();
         levelLabel.putClientProperty("translationKey", "level.label");
-        System.out.println("Level label created with translationKey: level.label");
         levelLabel.getAccessibleContext().setAccessibleName("level.label");
         controlPanel.add(levelLabel);
         controlPanel.add(levelFilter);
 
         JButton clearButton = new JButton();
         clearButton.putClientProperty("translationKey", "clear.button");
-        System.out.println("Clear button created with translationKey: clear.button");
         clearButton.addActionListener(e -> logContent.setText(""));
         controlPanel.add(clearButton);
 
         JButton saveButton = new JButton();
         saveButton.putClientProperty("translationKey", "save.button");
-        System.out.println("Save button created with translationKey: save.button");
         saveButton.addActionListener(this::saveLogToFile);
         controlPanel.add(saveButton);
 

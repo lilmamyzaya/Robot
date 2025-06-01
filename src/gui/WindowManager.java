@@ -14,31 +14,31 @@ public class WindowManager {
     private static final String CONFIG_PATH = System.getProperty("user.home") + "/robots_config.properties";
     private static final Dimension NORMAL_SIZE = new Dimension(950, 850);
     private final LocalizationManager localizationManager;
+    private static final String LOCALE_KEY = "locale";
 
     public WindowManager(JDesktopPane desktopPane, RobotModel robotModel) {
         this.desktopPane = desktopPane;
         this.robotModel = robotModel;
-        this.localizationManager = LocalizationManager.getInstance();
+        this.localizationManager = LocalizationManager.getInstance(this);
     }
 
     public void initializeWindows() {
         desktopPane.removeAll();
 
-        LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource());
+        LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource(), this); // Передаём this
         logWindow.setBounds(10, 10, 500, 500);
         addWindow(logWindow);
 
         GameVisualizer visualizer = new GameVisualizer(robotModel);
-        GameWindow gameWindow = new GameWindow(visualizer);
+        GameWindow gameWindow = new GameWindow(visualizer, this); // Передаём this
         gameWindow.setBounds(520, 10, 400, 400);
         addWindow(gameWindow);
 
-        RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(robotModel);
+        RobotCoordinatesWindow coordsWindow = new RobotCoordinatesWindow(robotModel, this); // Передаём this
         coordsWindow.setBounds(930, 10, 200, 100);
         addWindow(coordsWindow);
 
         for (JInternalFrame frame : desktopPane.getAllFrames()) {
-            System.out.println("Updating UI for internal frame: " + frame.getClass().getSimpleName());
             localizationManager.updateUI(frame);
         }
     }
@@ -54,7 +54,7 @@ public class WindowManager {
     }
 
     public void saveWindowState(JFrame frame) {
-        Properties props = new Properties();
+        Properties props = loadProperties();
         int state = frame.getExtendedState();
         props.setProperty("main.state", String.valueOf(state));
 
@@ -77,20 +77,17 @@ public class WindowManager {
             }
         }
 
-        try {
-            File configFile = new File(CONFIG_PATH);
-            configFile.getParentFile().mkdirs();
-            try (FileOutputStream fos = new FileOutputStream(configFile)) {
-                props.store(fos, localizationManager.getString("window.state.config.comment"));
-                Logger.debug(localizationManager.getString("config.saved") + " " + CONFIG_PATH);
-            }
-        } catch (IOException e) {
-            Logger.error(localizationManager.getString("window.state.save.error") + ": " + e.getMessage());
+        // Явно сохраняем текущую локаль перед записью в файл
+        String currentLocale = localizationManager.getCurrentLocale().getLanguage();
+        if (currentLocale != null && !currentLocale.isEmpty()) {
+            props.setProperty(LOCALE_KEY, currentLocale);
         }
+
+        saveProperties(props);
     }
 
     public void loadWindowState(JFrame frame) {
-        Properties props = new Properties();
+        Properties props = loadProperties();
         File configFile = new File(CONFIG_PATH);
 
         frame.setMinimumSize(NORMAL_SIZE);
@@ -113,9 +110,7 @@ public class WindowManager {
             return;
         }
 
-        try (FileInputStream fis = new FileInputStream(configFile)) {
-            props.load(fis);
-
+        try {
             int state = Integer.parseInt(props.getProperty("main.state", String.valueOf(Frame.MAXIMIZED_BOTH)));
             Logger.debug(localizationManager.getString("loaded.window.state") + ": state=" + state);
             frame.setExtendedState(state);
@@ -145,7 +140,7 @@ public class WindowManager {
                     loadInternalFrameState(internalFrame, translationKey, props);
                 }
             }
-        } catch (IOException | NumberFormatException e) {
+        } catch (NumberFormatException e) {
             Logger.error(localizationManager.getString("window.state.load.error") + ": " + e.getMessage());
             frame.setExtendedState(Frame.MAXIMIZED_BOTH);
             Logger.debug(localizationManager.getString("load.error.maximized"));
@@ -181,6 +176,44 @@ public class WindowManager {
         int y = (screenSize.height - frame.getHeight()) / 2;
         frame.setLocation(x, y);
         Logger.debug(localizationManager.getString("centering.window") + ": x=" + x + ", y=" + y);
+    }
+
+    private Properties loadProperties() {
+        Properties props = new Properties();
+        File configFile = new File(CONFIG_PATH);
+        if (configFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(configFile)) {
+                props.load(fis);
+            } catch (IOException e) {
+                Logger.error(localizationManager.getString("window.state.load.error") + ": " + e.getMessage());
+            }
+        }
+        return props;
+    }
+
+    private void saveProperties(Properties props) {
+        try {
+            File configFile = new File(CONFIG_PATH);
+            configFile.getParentFile().mkdirs();
+            try (FileOutputStream fos = new FileOutputStream(configFile)) {
+                props.store(fos, localizationManager.getString("window.state.config.comment"));
+                Logger.debug(localizationManager.getString("config.saved") + " " + CONFIG_PATH);
+            }
+        } catch (IOException e) {
+            Logger.error(localizationManager.getString("window.state.save.error") + ": " + e.getMessage());
+        }
+    }
+
+    public void saveLocale(String language) {
+        Properties properties = loadProperties();
+        properties.setProperty(LOCALE_KEY, language);
+        saveProperties(properties);
+    }
+
+    public String loadLocale() {
+        Properties properties = loadProperties();
+        String language = properties.getProperty(LOCALE_KEY);
+        return language;
     }
 
     public void shutdown() {

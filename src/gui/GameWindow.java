@@ -7,13 +7,12 @@ public class GameWindow extends JInternalFrame {
     private final GameVisualizer m_visualizer;
     private final LocalizationManager localizationManager;
 
-    public GameWindow(GameVisualizer visualizer) {
+    public GameWindow(GameVisualizer visualizer, WindowManager windowManager) {
         super("", true, true, true, true);
         this.m_visualizer = visualizer;
-        this.localizationManager = LocalizationManager.getInstance();
+        this.localizationManager = LocalizationManager.getInstance(windowManager);
 
         putClientProperty("translationKey", "game.window.title");
-        System.out.println("GameWindow created with translationKey: game.window.title");
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(m_visualizer, BorderLayout.CENTER);

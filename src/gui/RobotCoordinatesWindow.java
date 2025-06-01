@@ -10,12 +10,11 @@ public class RobotCoordinatesWindow extends JInternalFrame implements Observer {
     private final JLabel coordsLabel;
     private final LocalizationManager localizationManager;
 
-    public RobotCoordinatesWindow(RobotModel model) {
+    public RobotCoordinatesWindow(RobotModel model, WindowManager windowManager) {
         super("", true, true, true, true);
-        localizationManager = LocalizationManager.getInstance();
+        localizationManager = LocalizationManager.getInstance(windowManager);
 
         putClientProperty("translationKey", "coordinates.window.title");
-        System.out.println("RobotCoordinatesWindow created with translationKey: coordinates.window.title");
 
         coordsLabel = new JLabel();
         add(coordsLabel);
